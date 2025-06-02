@@ -1,8 +1,8 @@
+#!/bin/bash
+
 # This script will parse the required linux-toradex branch 
 # and clone it into the linux-toradex folder. We do it this way because 
 # git submodule add with a specific branch and depth=1 isn't working...
-
-#!/bin/bash
 
 RELEASE_VERSION=13
 URL="https://artifacts.toradex.com:443/artifactory/torizoncore-oe-prod-frankfurt/scarthgap-7.x.y/release/${RELEASE_VERSION}/verdin-am62/torizon/torizon-docker/oedeploy/.kernel_scmbranch"
