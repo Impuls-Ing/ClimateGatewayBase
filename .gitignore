@@ -1,1 +1,5 @@
 linux-toradex
+cache
+*.tar
+*.tar.gz
+ClimateGatewayBase*/
