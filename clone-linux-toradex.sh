@@ -16,7 +16,7 @@ DIR="cache/linux-toradex"
 if [ -d "${DIR}" ]; then
     echo "Directory ${DIR} exists."
 
-    cd "${DIR}" || exit 1
+    pushd "${DIR}" || exit 1
 
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
     echo "Current branch: ${CURRENT_BRANCH} | Wanted branch: ${BRANCH}"
@@ -45,7 +45,7 @@ if [ -d "${DIR}" ]; then
         git pull --ff-only
     fi
 
-    cd ..
+    popd || exit 1
 else
     echo "Cloning branch ${BRANCH} with depth=1"
     git clone --depth 1 --branch "${BRANCH}" "${REPO_URL}" "${DIR}"
