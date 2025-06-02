@@ -1,0 +1,60 @@
+#!/bin/bash
+# This script will build a TorizonCore base image for ClimateGateway
+
+set -ex
+
+# NOTE: this does not work for zsh
+urldecode() {
+    local url="${1//+/ }"
+    printf '%b' "${url//%/\\x}"
+}
+
+# Search for base image on https://artifacts.toradex.com
+ARTIFACTS_OEDEPLOY="https://artifacts.toradex.com:443/artifactory/torizoncore-oe-prerelease-frankfurt/scarthgap-7.x.y/monthly/8/verdin-am62/torizon/torizon-docker/oedeploy/"
+BASE_IMAGE_URL="${ARTIFACTS_OEDEPLOY}torizon-docker-verdin-am62-Tezi_7.3.0-devel-202505%2Bbuild.8.tar"
+
+CACHE="cache"
+
+BASE_IMAGE_NAME=$(basename "$BASE_IMAGE_URL")
+BASE_IMAGE_NAME=$(urldecode "$BASE_IMAGE_NAME")
+BASE_IMAGE_VERSION=$(echo "$BASE_IMAGE_NAME" | grep -Po "(?<=torizon-docker-verdin-am62-Tezi_).+(?=\.tar)")
+OUTPUT_IMAGE="ClimateGatewayBase_${BASE_IMAGE_VERSION}"
+OSTREE_REFERENCE="${OUTPUT_IMAGE//[^a-zA-Z0-9]/_}"
+
+DOCKER_VOLUME_NAME="storage_${BASE_IMAGE_NAME//[^a-zA-Z0-9]/_}"
+TCB_VERSION="3.12.0"
+
+KERNEL_DIR="cache/linux-toradex"
+
+torizoncore-builder() {
+    docker run --rm -v /deploy -v "$(pwd)":/workdir -v "${DOCKER_VOLUME_NAME}:/storage" --network=host "torizon/torizoncore-builder:${TCB_VERSION}" "$@"
+}
+
+./clone-linux-toradex.sh
+
+if [ ! -d "$CACHE" ]; then
+    mkdir $CACHE
+fi
+
+if [ ! -f "${CACHE}/${BASE_IMAGE_NAME}" ]; then
+    wget -P "$CACHE" "$BASE_IMAGE_URL"
+fi
+
+docker volume rm "$DOCKER_VOLUME_NAME" > /dev/null 2>&1 || true
+torizoncore-builder images unpack "${CACHE}/${BASE_IMAGE_NAME}"
+
+torizoncore-builder dt apply \
+    --include-dir "$KERNEL_DIR/arch/arm64/boot/dts/ti/" \
+    --include-dir "$KERNEL_DIR/include/" \
+    "$KERNEL_DIR/arch/arm64/boot/dts/ti/k3-am625-verdin-nonwifi-ivy.dts"
+
+torizoncore-builder union "$OSTREE_REFERENCE" \
+    --changes-directory rootfs-overlay/tailscale/
+
+torizoncore-builder deploy \
+    --output-directory "$OUTPUT_IMAGE" \
+    --image-name "ClimateGatewayBase" \
+    --image-description "Base image for ClimateGateway booting with Ivy device-tree" \
+    --image-accept-licence \
+    --image-autoreboot \
+    "$OSTREE_REFERENCE"
