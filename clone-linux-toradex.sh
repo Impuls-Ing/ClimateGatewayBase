@@ -11,7 +11,7 @@ BRANCH=$(curl -s "$URL")
 echo "Kernel SCM Branch: ${BRANCH}"
 
 REPO_URL="git://git.toradex.com/linux-toradex.git"
-DIR="linux-toradex"
+DIR="cache/linux-toradex"
 
 if [ -d "${DIR}" ]; then
     echo "Directory ${DIR} exists."
