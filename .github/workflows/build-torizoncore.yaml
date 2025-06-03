@@ -1,0 +1,127 @@
+name: Build & Deploy ClimateGatewayBase
+on: push
+
+jobs:
+  build:
+    name: Build TorizonCore Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - uses: actions/cache@v3
+        id: cache
+        with:
+          path: cache/
+          key: tcb
+
+      - name: Construct Release Version TAG
+        run: |
+          COMMIT_TAG=""
+          if git describe --exact-match --tags > /dev/null 2>&1; then
+            COMMIT_TAG="$(git describe --exact-match --tags)-"
+          fi
+
+          FULL_COMMIT_HASH=$(git rev-parse HEAD)
+          SHORT_COMMIT_HASH=${FULL_COMMIT_HASH:0:8}
+
+          DIRTYTAG=""
+          git diff-index --quiet HEAD -- || DIRTYTAG="-dirty"
+
+          RELEASE_TAG=${COMMIT_TAG}${SHORT_COMMIT_HASH}${DIRTYTAG}
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
+
+      - name: Build TorizonCore Image
+        shell: bash
+        run: ./build.sh
+
+      - name: Save environment variables for release stage
+        run: |
+          { echo "OUTPUT_IMAGE=${{ env.OUTPUT_IMAGE }}";
+            echo "OSTREE_REFERENCE=${{ env.OSTREE_REFERENCE }}";
+            echo "RELEASE_TAG=${{ env.RELEASE_TAG }}";
+          } >> variables.env
+          cat variables.env
+
+      - name: Upload environment variable
+        uses: actions/upload-artifact@v4
+        with:
+          name: variables
+          path: variables.env
+
+      - name: Upload TorizonCore Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: climategatewaybase_tezi_image
+          path: ${{ env.OUTPUT_IMAGE }}
+
+  release:
+    name: Release & Deploy Built Image
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.ref, 'refs/tags/v')
+    needs:
+      - build
+
+    steps:
+      - name: Download github environment variables
+        uses: actions/download-artifact@v4
+        with:
+          name: variables
+          path: .
+
+      - name: Load environment variables
+        run: |
+          cat variables.env
+          cat variables.env >> $GITHUB_ENV
+
+      - name: Download previously built TorizonCore Image
+        uses: actions/download-artifact@v4
+        with:
+          name: climategatewaybase_tezi_image
+          path: "${{ env.OUTPUT_IMAGE }}/"
+
+      - name: List files (debug)
+        run: |
+          ls -la
+          tree . || true
+
+      - name: TorizonCore Builder load image
+        run: |
+          set -x
+          docker run --rm \
+            -v /deploy \
+            -v "$(pwd)":/workdir \
+            -v "tcbuild:/storage" \
+            --network=host \
+            torizon/torizoncore-builder:3.12.0 \
+            images unpack \
+            ${{ env.OUTPUT_IMAGE }}
+
+      - name: Push Application to Torizon Platform
+        env:
+          PLATFORM_CREDENTIALS: ${{ secrets.PLATFORM_CREDENTIALS }}
+        run: |
+          set -x
+          echo "$PLATFORM_CREDENTIALS" | base64 -d > credentials.zip
+          docker run --rm \
+            -v /deploy \
+            -v "$(pwd)":/workdir \
+            -v "tcbuild:/storage" \
+            --network=host \
+            torizon/torizoncore-builder:3.12.0 \
+            platform push \
+            --credentials credentials.zip \
+            --package-name ClimateGatewayBase \
+            --package-version ${{ env.RELEASE_TAG }} \
+            ${{ env.OSTREE_REFERENCE }}
+
+      - name: Compress Image for storing in GitHub release
+        run: |
+          tar -czf ClimateGatewayBase-${{ env.RELEASE_TAG }}.tar.gz ${{ env.OUTPUT_IMAGE }}
+
+      - name: Create Release Asset
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda
+        with:
+          files: |
+            ClimateGatewayBase-${{ env.RELEASE_TAG }}.tar.gz
