@@ -70,3 +70,12 @@ torizoncore-builder deploy \
     --image-accept-licence \
     --image-autoreboot \
     "$OSTREE_REFERENCE"
+
+# Save variables for GitHub workflows
+GITHUB_ENV=${GITHUB_ENV:-""}
+if [ -n "$GITHUB_ENV" ]; then
+    {  echo "OUTPUT_IMAGE=${OUTPUT_IMAGE}";
+       echo "OSTREE_REFERENCE=${OSTREE_REFERENCE}";
+       echo "DOCKER_VOLUME_NAME=${DOCKER_VOLUME_NAME}";
+    } >> "$GITHUB_ENV"
+fi
