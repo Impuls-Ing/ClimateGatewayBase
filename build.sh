@@ -60,7 +60,8 @@ torizoncore-builder dt apply \
     "$KERNEL_DIR/arch/arm64/boot/dts/ti/k3-am625-verdin-nonwifi-ivy.dts"
 
 torizoncore-builder union "$OSTREE_REFERENCE" \
-    --changes-directory rootfs-overlay/tailscale/
+    --changes-directory rootfs-overlay/tailscale/ \
+    --changes-directory rootfs-overlay/sethostname/
 
 torizoncore-builder deploy \
     --output-directory "$OUTPUT_IMAGE" \
