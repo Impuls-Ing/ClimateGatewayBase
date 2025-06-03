@@ -18,8 +18,8 @@ CACHE="cache"
 BASE_IMAGE_NAME=$(basename "$BASE_IMAGE_URL")
 BASE_IMAGE_NAME=$(urldecode "$BASE_IMAGE_NAME")
 BASE_IMAGE_VERSION=$(echo "$BASE_IMAGE_NAME" | grep -Po "(?<=torizon-docker-verdin-am62-Tezi_).+(?=\.tar)")
-OUTPUT_IMAGE="ClimateGatewayBase_${BASE_IMAGE_VERSION}"
-OSTREE_REFERENCE="${OUTPUT_IMAGE//[^a-zA-Z0-9]/_}"
+OSTREE_REFERENCE="ClimateGatewayBase"
+OUTPUT_IMAGE="${OSTREE_REFERENCE}_${BASE_IMAGE_VERSION}"
 
 DOCKER_VOLUME_NAME="storage_${BASE_IMAGE_NAME//[^a-zA-Z0-9]/_}"
 TCB_VERSION="3.12.0"
@@ -76,6 +76,5 @@ GITHUB_ENV=${GITHUB_ENV:-""}
 if [ -n "$GITHUB_ENV" ]; then
     {  echo "OUTPUT_IMAGE=${OUTPUT_IMAGE}";
        echo "OSTREE_REFERENCE=${OSTREE_REFERENCE}";
-       echo "DOCKER_VOLUME_NAME=${DOCKER_VOLUME_NAME}";
     } >> "$GITHUB_ENV"
 fi
