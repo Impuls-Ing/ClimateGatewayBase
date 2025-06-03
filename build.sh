@@ -30,6 +30,17 @@ torizoncore-builder() {
     docker run --rm -v /deploy -v "$(pwd)":/workdir -v "${DOCKER_VOLUME_NAME}:/storage" --network=host "torizon/torizoncore-builder:${TCB_VERSION}" "$@"
 }
 
+if [ -d "$OUTPUT_IMAGE" ]; then
+    echo "Output image already present, rebuild? [y/n]"
+    read -r answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborted."
+        exit 1
+    else
+        rm -rf "$OUTPUT_IMAGE"
+    fi
+fi
+
 ./clone-linux-toradex.sh
 
 if [ ! -d "$CACHE" ]; then
