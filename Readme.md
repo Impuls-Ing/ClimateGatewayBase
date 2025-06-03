@@ -12,3 +12,11 @@ To build and deploy you can use our bespoke scripts, which will make use of the 
 This is a way more flexible and versatile approach than working with the tcb plugin and the Toradex scripts...
 
 More info will follow...
+
+# Release Overview
+
+This table shows the version of ClimateGatewayBase and on which Toradex BSP it is built on.
+
+| ClimateGatewayBase | Toradex BSP Version        |
+|--------------------|----------------------------|
+| v0.1.0             | 7.3.0-devel-202505+build.8 |
