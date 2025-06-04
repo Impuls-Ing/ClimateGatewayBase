@@ -1,14 +1,19 @@
 #!/bin/bash
+# This script will clone or update the required linux-toradex git repo given
+# the required branch and commit.
 
-# This script will parse the required linux-toradex branch 
-# and clone it into the linux-toradex folder. We do it this way because 
-# git submodule add with a specific branch and depth=1 isn't working...
+REQUESTED_BRANCH=$1
+REQUESTED_COMMIT=$2
+REQUESTED_COMMIT_LENGTH=${#REQUESTED_COMMIT}
 
-RELEASE_VERSION=13
-URL="https://artifacts.toradex.com:443/artifactory/torizoncore-oe-prod-frankfurt/scarthgap-7.x.y/release/${RELEASE_VERSION}/verdin-am62/torizon/torizon-docker/oedeploy/.kernel_scmbranch"
+if [ -z "$REQUESTED_BRANCH" ] || [ -z "$REQUESTED_COMMIT" ]; then
+    echo "Error: REQUESTED_BRANCH or REQUESTED_COMMIT is empty"
+    echo "Usage: clone-linux-toradex.sh branch commit_hash"
+    exit 1
+fi
 
-BRANCH=$(curl -s "$URL")
-echo "Kernel SCM Branch: ${BRANCH}"
+echo "Branch to check out: ${REQUESTED_BRANCH}"
+echo "Commit to check out: ${REQUESTED_COMMIT}"
 
 REPO_URL="git://git.toradex.com/linux-toradex.git"
 DIR="cache/linux-toradex"
@@ -18,35 +23,33 @@ if [ -d "${DIR}" ]; then
 
     pushd "${DIR}" || exit 1
 
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    echo "Current branch: ${CURRENT_BRANCH} | Wanted branch: ${BRANCH}"
-
     echo "Make sure repo is clean..."
     git clean -fdx
     git reset --hard
+    git fetch origin "${REQUESTED_BRANCH}"
+    git checkout "${REQUESTED_COMMIT}"
 
-    if [ "${CURRENT_BRANCH}" = "${BRANCH}" ]; then
-        echo "Branch is correct. Checking if up to date..."
+    CURRENT_COMMIT=$(git rev-parse HEAD | cut -c1-"$REQUESTED_COMMIT_LENGTH")
+    echo "Current commit hash: ${CURRENT_COMMIT} | Wanted hash: ${REQUESTED_COMMIT}"
 
-        git fetch origin "${BRANCH}"
-        LOCAL_HASH=$(git rev-parse HEAD)
-        REMOTE_HASH=$(git rev-parse origin/"${BRANCH}")
-
-        if [ "${LOCAL_HASH}" = "${REMOTE_HASH}" ]; then
-            echo "Branch is up to date."
-        else
-            echo "Branch is outdated. Pulling latest changes..."
-            git pull --ff-only
-        fi
+    if [ "${CURRENT_COMMIT}" = "${REQUESTED_COMMIT}" ]; then
+        echo "Commit hash is correct."
     else
-        echo "Branch mismatch. Checking out correct branch..."
-        git fetch origin "${BRANCH}"
-        git checkout "${BRANCH}"
-        git pull --ff-only
+        echo "Commit hash is not correct. Trying to get the right commit..."
+        git checkout "${REQUESTED_COMMIT}"
+        if [ "${CURRENT_COMMIT}" = "${REQUESTED_COMMIT}" ]; then
+            echo "Commit hash is correct after retry."
+        else
+            echo "Commit hash still incorrect. Exiting."
+            exit 1
+        fi
     fi
 
     popd || exit 1
 else
-    echo "Cloning branch ${BRANCH} with depth=1"
-    git clone --depth 1 --branch "${BRANCH}" "${REPO_URL}" "${DIR}"
+    echo "Cloning branch ${REQUESTED_BRANCH} and checking out commit ${REQUESTED_COMMIT}"
+    git clone --branch "${REQUESTED_BRANCH}" "${REPO_URL}" "${DIR}"
+    pushd "${DIR}" || exit 1
+    git checkout "${REQUESTED_COMMIT}"
+    popd || exit 1
 fi

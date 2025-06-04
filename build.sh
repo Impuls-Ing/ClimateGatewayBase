@@ -12,6 +12,10 @@ urldecode() {
 # Search for base image on https://artifacts.toradex.com
 ARTIFACTS_OEDEPLOY="https://artifacts.toradex.com:443/artifactory/torizoncore-oe-prerelease-frankfurt/scarthgap-7.x.y/monthly/8/verdin-am62/torizon/torizon-docker/oedeploy/"
 BASE_IMAGE_URL="${ARTIFACTS_OEDEPLOY}torizon-docker-verdin-am62-Tezi_7.3.0-devel-202505%2Bbuild.8.tar"
+ARTIFACTS_KERNEL_COMMIT_URL="${ARTIFACTS_OEDEPLOY}.kernel_scmversion"
+ARTIFACTS_KERNEL_BRANCH_URL="${ARTIFACTS_OEDEPLOY}.kernel_scmbranch"
+ARTIFACTS_KERNEL_COMMIT=$(curl -s $ARTIFACTS_KERNEL_COMMIT_URL)
+ARTIFACTS_KERNEL_BRANCH=$(curl -s $ARTIFACTS_KERNEL_BRANCH_URL)
 
 CACHE="cache"
 
@@ -45,7 +49,7 @@ if [ -d "$OUTPUT_IMAGE" ]; then
     fi
 fi
 
-./clone-linux-toradex.sh
+./clone-linux-toradex.sh "$ARTIFACTS_KERNEL_BRANCH" "$ARTIFACTS_KERNEL_COMMIT" || exit 1
 
 if [ ! -d "$CACHE" ]; then
     mkdir $CACHE
