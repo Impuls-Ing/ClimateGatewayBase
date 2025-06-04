@@ -1,7 +1,7 @@
 #!/bin/bash
 # This script will build a TorizonCore base image for ClimateGateway
 
-set -ex
+set -e
 
 # NOTE: this does not work for zsh
 urldecode() {
@@ -26,6 +26,10 @@ TCB_VERSION="3.12.0"
 
 KERNEL_DIR="cache/linux-toradex"
 
+echo ""
+echo "######## TorizonCore Builder Command that is being used: #################"
+echo "alias torizoncore-builder=\"docker run --rm -v /deploy -v $(pwd):/workdir -v ${DOCKER_VOLUME_NAME}:/storage --network=host torizon/torizoncore-builder:${TCB_VERSION}\""
+echo ""
 torizoncore-builder() {
     docker run --rm -v /deploy -v "$(pwd)":/workdir -v "${DOCKER_VOLUME_NAME}:/storage" --network=host "torizon/torizoncore-builder:${TCB_VERSION}" "$@"
 }
